@@ -15,7 +15,7 @@ class AccessLogScreenTest extends TestCase
     use RefreshDatabase;
 
     /**
-     * @param  array<string, string>  $query
+     * @param  array<string, string|array<int, string>>  $query
      * @return array<int, int>
      */
     private function ids(array $query): array
@@ -33,13 +33,16 @@ class AccessLogScreenTest extends TestCase
         $a = AccessLog::factory()->create(['client_id' => $ana->id, 'scanned_at' => '2027-03-10 09:00']);
         $b = AccessLog::factory()->create(['client_id' => $ana->id, 'type' => AccessType::Exit, 'scanned_at' => '2027-03-10 10:00']);
         $c = AccessLog::factory()->create(['client_id' => $rui->id, 'scanned_at' => '2027-03-11 09:00']);
+        $d = AccessLog::factory()->create(['client_id' => $rui->id, 'type' => AccessType::Refused, 'refusal_reason' => RefusalReason::Overdue, 'scanned_at' => '2027-03-09 09:00']);
 
-        $this->assertSame([$c->id, $b->id, $a->id], $this->ids([]));
+        $this->assertSame([$c->id, $b->id, $a->id, $d->id], $this->ids([]));
         $this->assertSame([$b->id, $a->id], $this->ids(['date' => '2027-03-10']));
         $this->assertSame([$b->id, $a->id], $this->ids(['client' => 'Ana']));
-        $this->assertSame([$c->id], $this->ids(['client' => $rui->nif]));
+        $this->assertSame([$c->id, $d->id], $this->ids(['client' => $rui->nif]));
         $this->assertSame([$b->id], $this->ids(['type' => 'exit']));
-        $this->assertSame([$c->id, $b->id, $a->id], $this->ids(['type' => 'bogus']));
+        $this->assertSame([$d->id], $this->ids(['type' => 'refused']));
+        $this->assertSame([$c->id, $b->id, $a->id, $d->id], $this->ids(['type' => ['exit']]));
+        $this->assertSame([$c->id, $b->id, $a->id, $d->id], $this->ids(['type' => 'bogus']));
     }
 
     public function test_refused_rows_show_reason_label(): void

@@ -14,7 +14,8 @@ class AccessLogController extends Controller
     public function index(AccessLogFilterRequest $request): View
     {
         $filters = $request->validated();
-        $type = AccessType::tryFrom((string) $request->query('type'));
+        $rawType = $request->query('type');
+        $type = is_string($rawType) ? AccessType::tryFrom($rawType) : null;
 
         $logs = AccessLog::with(['client.user', 'scanner'])
             ->when($filters['date'] ?? null, fn (Builder $query, string $date) => $query->whereDate('scanned_at', $date))
