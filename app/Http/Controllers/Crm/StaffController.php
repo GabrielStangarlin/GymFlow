@@ -8,7 +8,6 @@ use App\Http\Requests\StoreStaffRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
 class StaffController extends Controller
@@ -30,7 +29,7 @@ class StaffController extends Controller
         User::create([
             'name' => $request->validated('name'),
             'email' => $request->validated('email'),
-            'password' => Hash::make($request->validated('password')),
+            'password' => $request->validated('password'),
             'role' => Role::Staff,
             'active' => true,
         ]);
@@ -40,6 +39,8 @@ class StaffController extends Controller
 
     public function deactivate(Request $request, User $user): RedirectResponse
     {
+        $this->abortUnlessStaffOrAdmin($user);
+
         if ($user->is($request->user())) {
             return back()->withErrors(['user' => 'Não pode desativar a sua própria conta.']);
         }
@@ -51,8 +52,15 @@ class StaffController extends Controller
 
     public function activate(User $user): RedirectResponse
     {
+        $this->abortUnlessStaffOrAdmin($user);
+
         $user->update(['active' => true]);
 
         return back()->with('status', 'Funcionário ativado.');
+    }
+
+    private function abortUnlessStaffOrAdmin(User $user): void
+    {
+        abort_unless(in_array($user->role, [Role::Admin, Role::Staff], true), 404);
     }
 }

@@ -63,4 +63,30 @@ class StaffManagementTest extends TestCase
 
         $this->assertTrue($admin->fresh()->active);
     }
+
+    public function test_staff_endpoints_reject_clients(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $client = User::factory()->create();
+
+        $this->actingAs($admin)->patch(route('crm.staff.deactivate', $client))->assertNotFound();
+        $this->assertTrue($client->fresh()->active);
+
+        $client->update(['active' => false]);
+        $this->actingAs($admin)->patch(route('crm.staff.activate', $client))->assertNotFound();
+        $this->assertFalse($client->fresh()->active);
+    }
+
+    public function test_store_validates_email_and_password(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $existing = User::factory()->staff()->create();
+
+        $this->actingAs($admin)->post(route('crm.staff.store'), [
+            'name' => 'Rui',
+            'email' => $existing->email,
+            'password' => 'segredo123',
+            'password_confirmation' => 'outra12345',
+        ])->assertSessionHasErrors(['email', 'password']);
+    }
 }
