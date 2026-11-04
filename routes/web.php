@@ -4,6 +4,7 @@ use App\Http\Controllers\ActivationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ClientAreaController;
 use App\Http\Controllers\Crm\EnrollmentController;
+use App\Http\Controllers\Crm\ScanController;
 use App\Http\Controllers\Crm\StaffController;
 use Illuminate\Support\Facades\Route;
 
@@ -22,6 +23,8 @@ Route::middleware(['auth', 'active', 'role:admin,staff'])->prefix('crm')->name('
 
     Route::get('/inscricoes/nova', [EnrollmentController::class, 'create'])->name('enrollments.create');
     Route::post('/inscricoes', [EnrollmentController::class, 'store'])->name('enrollments.store');
+
+    Route::post('/scan', [ScanController::class, 'store'])->name('scan.store');
 
     Route::middleware('role:admin')->prefix('funcionarios')->name('staff.')->group(function (): void {
         Route::get('/', [StaffController::class, 'index'])->name('index');

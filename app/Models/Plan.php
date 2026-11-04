@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Database\Factories\PlanFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -28,5 +29,14 @@ class Plan extends Model
     public function timeWindows(): HasMany
     {
         return $this->hasMany(PlanTimeWindow::class);
+    }
+
+    public function allowsTime(CarbonInterface $at): bool
+    {
+        $time = $at->format('H:i');
+
+        return $this->timeWindows->contains(
+            fn (PlanTimeWindow $window): bool => $time >= substr($window->starts_at, 0, 5) && $time <= substr($window->ends_at, 0, 5)
+        );
     }
 }
