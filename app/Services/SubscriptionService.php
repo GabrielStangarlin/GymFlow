@@ -18,20 +18,22 @@ class SubscriptionService
      */
     public function recordPayment(Subscription $subscription, User $recordedBy): Payment
     {
-        if ($subscription->status() === SubscriptionStatus::Ended) {
-            throw new SubscriptionNotAllowedException('Não é possível registar pagamentos numa assinatura terminada.');
-        }
-
         return DB::transaction(function () use ($subscription, $recordedBy): Payment {
-            $isFirstPayment = $subscription->paid_until === null;
-            $periodStart = $isFirstPayment ? today() : $subscription->paid_until->copy();
-            $startsOn = $isFirstPayment ? $periodStart : $subscription->starts_on;
+            $locked = $this->lock($subscription);
 
-            $paymentsCount = $subscription->payments()->where('type', PaymentType::Period)->count() + 1;
-            $periodEnd = $startsOn->copy()->addMonthsNoOverflow($subscription->billingPeriod->months * $paymentsCount);
+            if ($locked->status() === SubscriptionStatus::Ended) {
+                throw new SubscriptionNotAllowedException('Não é possível registar pagamentos numa assinatura terminada.');
+            }
 
-            $payment = $subscription->payments()->create([
-                'amount' => $subscription->amountPerPeriod(),
+            $isFirstPayment = $locked->paid_until === null;
+            $periodStart = $isFirstPayment ? today() : $locked->paid_until->copy();
+            $startsOn = $isFirstPayment ? $periodStart : $locked->starts_on;
+
+            $paymentsCount = $locked->payments()->where('type', PaymentType::Period)->count() + 1;
+            $periodEnd = $startsOn->copy()->addMonthsNoOverflow($locked->billingPeriod->months * $paymentsCount);
+
+            $payment = $locked->payments()->create([
+                'amount' => $locked->amountPerPeriod(),
                 'type' => PaymentType::Period,
                 'paid_at' => now(),
                 'period_start' => $periodStart,
@@ -39,7 +41,8 @@ class SubscriptionService
                 'recorded_by' => $recordedBy->id,
             ]);
 
-            $subscription->update(['starts_on' => $startsOn, 'paid_until' => $periodEnd]);
+            $locked->update(['starts_on' => $startsOn, 'paid_until' => $periodEnd]);
+            $subscription->refresh();
 
             return $payment;
         });
@@ -50,19 +53,22 @@ class SubscriptionService
      */
     public function settleDebt(Subscription $subscription, User $recordedBy): Payment
     {
-        if (! $subscription->hasOutstandingDebt()) {
-            throw new SubscriptionNotAllowedException('Esta assinatura não tem dívida por regularizar.');
-        }
-
         return DB::transaction(function () use ($subscription, $recordedBy): Payment {
-            $payment = $subscription->payments()->create([
-                'amount' => $subscription->amountPerPeriod(),
+            $locked = $this->lock($subscription);
+
+            if (! $locked->hasOutstandingDebt()) {
+                throw new SubscriptionNotAllowedException('Esta assinatura não tem dívida por regularizar.');
+            }
+
+            $payment = $locked->payments()->create([
+                'amount' => $locked->amountPerPeriod(),
                 'type' => PaymentType::Debt,
                 'paid_at' => now(),
                 'recorded_by' => $recordedBy->id,
             ]);
 
-            $subscription->update(['debt_settled_at' => now()]);
+            $locked->update(['debt_settled_at' => now()]);
+            $subscription->refresh();
 
             return $payment;
         });
@@ -73,10 +79,20 @@ class SubscriptionService
      */
     public function cancel(Subscription $subscription): void
     {
-        if ($subscription->status() !== SubscriptionStatus::Pending) {
-            throw new SubscriptionNotAllowedException('Só é possível cancelar assinaturas pendentes.');
-        }
+        DB::transaction(function () use ($subscription): void {
+            $locked = $this->lock($subscription);
 
-        $subscription->update(['ended_on' => today(), 'end_reason' => EndReason::Cancelled]);
+            if ($locked->status() !== SubscriptionStatus::Pending) {
+                throw new SubscriptionNotAllowedException('Só é possível cancelar assinaturas pendentes.');
+            }
+
+            $locked->update(['ended_on' => today(), 'end_reason' => EndReason::Cancelled]);
+            $subscription->refresh();
+        });
+    }
+
+    private function lock(Subscription $subscription): Subscription
+    {
+        return Subscription::lockForUpdate()->findOrFail($subscription->id);
     }
 }

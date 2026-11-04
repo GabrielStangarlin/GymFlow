@@ -4,10 +4,12 @@ namespace Database\Factories;
 
 use App\Enums\ChangeType;
 use App\Enums\PaymentMethod;
+use App\Enums\PaymentType;
 use App\Models\BillingPeriod;
 use App\Models\Client;
 use App\Models\Plan;
 use App\Models\Subscription;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
 
@@ -45,6 +47,15 @@ class SubscriptionFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'starts_on' => $date,
             'paid_until' => Carbon::parse($date)->addMonthNoOverflow()->toDateString(),
-        ]);
+        ])->afterCreating(function (Subscription $subscription): void {
+            $subscription->payments()->create([
+                'amount' => $subscription->amountPerPeriod(),
+                'type' => PaymentType::Period,
+                'paid_at' => $subscription->starts_on,
+                'period_start' => $subscription->starts_on,
+                'period_end' => $subscription->paid_until,
+                'recorded_by' => User::factory()->staff()->create()->id,
+            ]);
+        });
     }
 }

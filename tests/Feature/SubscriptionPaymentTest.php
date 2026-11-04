@@ -159,4 +159,37 @@ class SubscriptionPaymentTest extends TestCase
         $this->expectException(SubscriptionNotAllowedException::class);
         $this->service()->cancel($active);
     }
+
+    public function test_factory_active_subscription_has_matching_payment_and_next_payment_is_consistent(): void
+    {
+        $subscription = Subscription::factory()->activeFrom('2027-01-10')->create();
+        $this->assertSame(1, $subscription->payments()->count());
+
+        $this->travelTo('2027-02-09 10:00');
+        $this->service()->recordPayment($subscription, $this->staff());
+
+        $this->assertSame('2027-03-10', $subscription->paid_until->toDateString());
+    }
+
+    public function test_quarterly_subscription_advances_three_then_six_months(): void
+    {
+        $quarterly = BillingPeriod::factory()->create(['name' => 'Trimestral', 'months' => 3, 'discount_percent' => 5]);
+        $this->travelTo('2027-01-10 10:00');
+        $subscription = Subscription::factory()->pending()->create(['billing_period_id' => $quarterly->id, 'discount_percent' => 5]);
+
+        $this->service()->recordPayment($subscription, $this->staff());
+        $this->assertSame('2027-04-10', $subscription->paid_until->toDateString());
+
+        $this->service()->recordPayment($subscription, $this->staff());
+        $this->assertSame('2027-07-10', $subscription->paid_until->toDateString());
+    }
+
+    public function test_debt_payment_does_not_count_toward_period_count(): void
+    {
+        $subscription = Subscription::factory()->activeFrom('2027-01-10')->create(['ended_on' => '2027-03-01', 'end_reason' => EndReason::Overdue]);
+        $this->service()->settleDebt($subscription, $this->staff());
+
+        $this->assertSame(1, $subscription->payments()->where('type', PaymentType::Period)->count());
+        $this->assertSame(2, $subscription->payments()->count());
+    }
 }
