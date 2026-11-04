@@ -30,14 +30,24 @@ class SubscriptionService
         bool $paidNow,
         User $recordedBy,
     ): Subscription {
-        $current = $client->currentSubscription();
-
         // The daily command may not have run yet. Committed on its own so the debt survives the exception below.
-        if ($current?->paid_until !== null && $current->paid_until->toDateString() < today()->subDays(2)->toDateString()) {
-            $this->endAsOverdue($current, today());
-        }
+        DB::transaction(function () use ($client): void {
+            $this->lockClient($client);
+            $current = $client->currentSubscription();
+
+            if ($current?->paid_until === null) {
+                return;
+            }
+
+            $locked = $this->lock($current);
+
+            if ($locked->ended_on === null && $locked->paid_until->toDateString() < today()->subDays(2)->toDateString()) {
+                $this->endAsOverdue($locked, today());
+            }
+        });
 
         return DB::transaction(function () use ($client, $plan, $billingPeriod, $paymentMethod, $paidNow, $recordedBy): Subscription {
+            $this->lockClient($client);
             $current = $client->currentSubscription();
 
             if ($client->hasOutstandingDebt()) {
@@ -87,7 +97,7 @@ class SubscriptionService
             return ChangeType::Renewal;
         }
 
-        return match ((float) $plan->monthly_price <=> (float) $previous->plan->monthly_price) {
+        return match (bccomp((string) $plan->monthly_price, (string) $previous->plan->monthly_price, 2)) {
             1 => ChangeType::Upgrade,
             -1 => ChangeType::Downgrade,
             default => ChangeType::Lateral,
@@ -170,6 +180,11 @@ class SubscriptionService
             $locked->update(['ended_on' => today(), 'end_reason' => EndReason::Cancelled]);
             $subscription->refresh();
         });
+    }
+
+    private function lockClient(Client $client): void
+    {
+        Client::whereKey($client->id)->lockForUpdate()->firstOrFail();
     }
 
     private function lock(Subscription $subscription): Subscription

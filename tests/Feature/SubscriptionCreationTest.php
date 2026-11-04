@@ -39,6 +39,8 @@ class SubscriptionCreationTest extends TestCase
         $subscription = $this->subscribe($client, Plan::factory()->create());
 
         $this->assertSame(ChangeType::New, $subscription->change_type);
+        $this->assertSame('30.00', $subscription->monthly_price);
+        $this->assertSame('0.00', $subscription->discount_percent);
         $this->assertNull($subscription->previous_subscription_id);
         $this->assertSame(SubscriptionStatus::Pending, $subscription->status());
     }
@@ -158,5 +160,19 @@ class SubscriptionCreationTest extends TestCase
 
         $this->assertSame(ChangeType::New, $subscription->change_type);
         $this->assertNull($subscription->previous_subscription_id);
+    }
+
+    public function test_classification_uses_current_plan_prices(): void
+    {
+        $this->travelTo('2027-01-10 10:00');
+        $client = Client::factory()->create();
+        $old = Plan::factory()->create(['monthly_price' => 30]);
+        $this->subscribe($client, $old, true);
+        $old->update(['monthly_price' => 60]);
+        $this->travelTo('2027-02-11 10:00');
+
+        $subscription = $this->subscribe($client, Plan::factory()->create(['monthly_price' => 50]));
+
+        $this->assertSame(ChangeType::Downgrade, $subscription->change_type);
     }
 }
