@@ -78,7 +78,7 @@ O que o torna útil: a portaria é automática. O funcionário lê o QR e o sist
 ### 5.3 Pagamentos e estado da assinatura
 - O pagamento é só um sinal. O funcionário carrega num botão "Marcar como pago" e não há faturação nem recibos. [decidido] Fica registado o pagamento (valor, data, quem registou) e a assinatura passa a valer por mais um período.
 - O primeiro pagamento ativa a assinatura, e a **data de início é a data desse primeiro pagamento**. [minha decisão, a partir de "o plano fica válido somente quando ele pagar"]
-- A data do próximo pagamento conta a partir da data de início/1.º pagamento, somando a duração da periodicidade (1, 3, 6 ou 12 meses), e não a partir do dia em que se paga. [decidido] Exemplo: início a 10/01, mensal → vence a 10/02, depois a 10/03, mesmo que se pague a 15/02.
+- A data do próximo pagamento conta a partir da data de início/1.º pagamento, somando a duração da periodicidade (1, 3, 6 ou 12 meses), e não a partir do dia em que se paga. [decidido] Exemplo: início a 10/01, mensal → vence a 10/02, depois a 10/03, mesmo que se pague a 12/02 (dentro dos 2 dias de tolerância; depois disso a assinatura termina com dívida).
 - Um pagamento que prolonga a mesma assinatura (sem ser o primeiro) conta como **renovação** no histórico e nos dashboards. [decidido]
 - Estados:
   - **Pendente**: criada mas ainda sem pagamento. A entrada é recusada. [decidido]
