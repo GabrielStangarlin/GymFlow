@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Enums\Role;
 use App\Enums\SubscriptionStatus;
 use App\Models\BillingPeriod;
+use App\Models\Client;
 use App\Models\Plan;
+use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -45,5 +47,25 @@ class FoundationTest extends TestCase
         $this->assertSame('Ativa', SubscriptionStatus::Active->label());
         $this->assertSame('Em atraso', SubscriptionStatus::Overdue->label());
         $this->assertSame('Terminada', SubscriptionStatus::Ended->label());
+    }
+
+    public function test_factory_states_and_client_accessors(): void
+    {
+        $this->assertNull(Subscription::factory()->pending()->make()->paid_until);
+
+        $active = Subscription::factory()->activeFrom('2027-01-10')->make();
+        $this->assertSame('2027-01-10', $active->starts_on->toDateString());
+        $this->assertSame('2027-02-10', $active->paid_until->toDateString());
+
+        $plan = Plan::factory()->withWindow('06:00', '14:00')->create();
+        $this->assertCount(1, $plan->timeWindows);
+
+        $this->assertSame(Role::Staff, User::factory()->staff()->create()->role);
+        $this->assertSame(Role::Admin, User::factory()->admin()->create()->role);
+        $this->assertFalse(User::factory()->inactive()->create()->active);
+
+        $client = Client::factory()->create();
+        $this->assertSame($client->user->name, $client->name);
+        $this->assertSame($client->user->email, $client->email);
     }
 }

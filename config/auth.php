@@ -67,13 +67,6 @@ return [
             'model' => env('AUTH_MODEL', User::class),
         ],
 
-        'activations' => [
-            'provider' => 'users',
-            'table' => 'password_reset_tokens',
-            'expire' => 2880,
-            'throttle' => 60,
-        ],
-
         // 'users' => [
         //     'driver' => 'database',
         //     'table' => 'users',
