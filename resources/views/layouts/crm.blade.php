@@ -17,8 +17,10 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'GymFlow')</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @stack('scripts')
 </head>
 <body class="min-h-screen bg-gray-100 md:flex">
     <aside class="bg-gray-900 text-gray-100 md:w-60 md:min-h-screen p-4">

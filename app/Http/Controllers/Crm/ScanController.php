@@ -5,10 +5,16 @@ namespace App\Http\Controllers\Crm;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ScanRequest;
 use App\Services\AccessService;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 
 class ScanController extends Controller
 {
+    public function show(): View
+    {
+        return view('crm.scan.show');
+    }
+
     public function store(ScanRequest $request, AccessService $accessService): JsonResponse
     {
         $log = $accessService->scan($request->validated('token'), $request->user());

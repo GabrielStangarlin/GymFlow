@@ -24,6 +24,7 @@ Route::middleware(['auth', 'active', 'role:admin,staff'])->prefix('crm')->name('
     Route::get('/inscricoes/nova', [EnrollmentController::class, 'create'])->name('enrollments.create');
     Route::post('/inscricoes', [EnrollmentController::class, 'store'])->name('enrollments.store');
 
+    Route::get('/ler-qr', [ScanController::class, 'show'])->name('scan.show');
     Route::post('/scan', [ScanController::class, 'store'])->name('scan.store');
 
     Route::middleware('role:admin')->prefix('funcionarios')->name('staff.')->group(function (): void {
