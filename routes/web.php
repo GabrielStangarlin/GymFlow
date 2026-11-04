@@ -3,6 +3,7 @@
 use App\Http\Controllers\ActivationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ClientAreaController;
+use App\Http\Controllers\Crm\AccessLogController;
 use App\Http\Controllers\Crm\BillingPeriodController;
 use App\Http\Controllers\Crm\ClientController;
 use App\Http\Controllers\Crm\ClientSubscriptionController;
@@ -50,6 +51,8 @@ Route::middleware(['auth', 'active', 'role:admin,staff'])->prefix('crm')->name('
     Route::resource('planos', PlanController::class)->except(['show', 'destroy'])->names('plans')->parameters(['planos' => 'plan']);
     Route::get('/periodicidades', [BillingPeriodController::class, 'edit'])->name('billing-periods.edit');
     Route::put('/periodicidades', [BillingPeriodController::class, 'update'])->name('billing-periods.update');
+
+    Route::get('/entradas-saidas', [AccessLogController::class, 'index'])->name('access-logs.index');
 
     Route::get('/ler-qr', [ScanController::class, 'show'])->name('scan.show');
     Route::post('/scan', [ScanController::class, 'store'])->name('scan.store');
