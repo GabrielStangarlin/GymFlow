@@ -8,7 +8,7 @@ function show(colour, title, detail) {
     result.className = `mt-4 rounded p-6 text-center text-white ${colour}`;
     result.innerHTML = '';
     const h = document.createElement('div');
-    h.className = 'text-4xl font-bold';
+    h.className = 'text-4xl font-bold uppercase';
     h.textContent = title;
     result.append(h);
     for (const line of detail.filter(Boolean)) {
@@ -19,16 +19,32 @@ function show(colour, title, detail) {
     }
 }
 
+function cameraError() {
+    show('bg-amber-600', 'Câmara indisponível', [
+        'Permita o acesso à câmara. A leitura só funciona em localhost ou HTTPS.',
+    ]);
+}
+
 if (root) {
     document.getElementById('scan-start').addEventListener('click', async (event) => {
         const button = event.currentTarget;
         if (!navigator.mediaDevices) {
             return cameraError();
         }
+        button.disabled = true;
         const scanner = new Html5Qrcode('scan-reader');
+        let busy = false;
 
         const onScan = async (token) => {
-            scanner.pause(true);
+            if (busy) {
+                return;
+            }
+            busy = true;
+            try {
+                scanner.pause(true);
+            } catch {
+                // not scanning: the request still runs and the flow recovers below
+            }
             try {
                 const response = await fetch(root.dataset.scanUrl, {
                     method: 'POST',
@@ -45,25 +61,26 @@ if (root) {
                 const data = await response.json();
                 show(colours[data.type] ?? 'bg-gray-700', data.type_label, [data.client_name, data.reason_label]);
             } catch {
-                show('bg-red-600', 'Erro', ['Não foi possível validar o QR. Tente novamente.']);
+                show('bg-amber-600', 'Erro de comunicação', ['Não foi possível validar o QR. Tente novamente.']);
             }
             setTimeout(() => {
                 result.className = 'hidden';
-                scanner.resume();
+                busy = false;
+                try {
+                    scanner.resume();
+                } catch {
+                    // not paused: nothing to resume
+                }
             }, 3000);
         };
 
         try {
             await scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 250 }, onScan);
             button.classList.add('hidden');
+            result.className = 'hidden';
         } catch {
+            button.disabled = false;
             cameraError();
         }
     });
-}
-
-function cameraError() {
-    show('bg-red-600', 'Câmara indisponível', [
-        'Permita o acesso à câmara. A leitura só funciona em localhost ou HTTPS.',
-    ]);
 }

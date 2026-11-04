@@ -18,4 +18,14 @@ class ScanPageTest extends TestCase
             ->assertSee('data-scan-url="'.route('crm.scan.store').'"', false)
             ->assertSee('Ler QR');
     }
+
+    public function test_guest_is_redirected_to_login(): void
+    {
+        $this->get(route('crm.scan.show'))->assertRedirect(route('login'));
+    }
+
+    public function test_client_cannot_see_scan_page(): void
+    {
+        $this->actingAs(User::factory()->create())->get(route('crm.scan.show'))->assertForbidden();
+    }
 }
