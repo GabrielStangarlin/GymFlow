@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Enums\ChangeType;
 use App\Enums\EndReason;
 use App\Enums\PaymentMethod;
+use App\Enums\SubscriptionStatus;
+use Carbon\CarbonInterface;
 use Database\Factories\SubscriptionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -63,5 +65,35 @@ class Subscription extends Model
     public function previous(): BelongsTo
     {
         return $this->belongsTo(self::class, 'previous_subscription_id');
+    }
+
+    public function status(?CarbonInterface $today = null): SubscriptionStatus
+    {
+        if ($this->ended_on !== null) {
+            return SubscriptionStatus::Ended;
+        }
+
+        if ($this->paid_until === null) {
+            return SubscriptionStatus::Pending;
+        }
+
+        $today ??= today();
+
+        return $today->toDateString() <= $this->paid_until->toDateString()
+            ? SubscriptionStatus::Active
+            : SubscriptionStatus::Overdue;
+    }
+
+    /**
+     * Uses the price and discount copied onto the subscription, not the plan's current values.
+     */
+    public function amountPerPeriod(): float
+    {
+        return round((float) $this->monthly_price * $this->billingPeriod->months * (1 - (float) $this->discount_percent / 100), 2);
+    }
+
+    public function hasOutstandingDebt(): bool
+    {
+        return $this->end_reason === EndReason::Overdue && $this->debt_settled_at === null;
     }
 }
