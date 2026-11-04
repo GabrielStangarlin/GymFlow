@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ActivationController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\ClientAreaController;
 use App\Http\Controllers\Crm\EnrollmentController;
 use App\Http\Controllers\Crm\StaffController;
 use Illuminate\Support\Facades\Route;
@@ -32,5 +33,5 @@ Route::middleware(['auth', 'active', 'role:admin,staff'])->prefix('crm')->name('
 });
 
 Route::middleware(['auth', 'active', 'role:client'])->group(function (): void {
-    Route::view('/aluno', 'client.qr')->name('client.qr');
+    Route::get('/aluno', ClientAreaController::class)->name('client.qr');
 });

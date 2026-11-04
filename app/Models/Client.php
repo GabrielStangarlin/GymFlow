@@ -3,6 +3,10 @@
 namespace App\Models;
 
 use App\Enums\EndReason;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
 use Database\Factories\ClientFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -54,6 +58,13 @@ class Client extends Model
     public function accessLogs(): HasMany
     {
         return $this->hasMany(AccessLog::class);
+    }
+
+    public function qrSvg(int $size = 280): string
+    {
+        $writer = new Writer(new ImageRenderer(new RendererStyle($size), new SvgImageBackEnd));
+
+        return $writer->writeString($this->qr_token);
     }
 
     protected function name(): Attribute
