@@ -3,9 +3,11 @@
 use App\Http\Controllers\ActivationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ClientAreaController;
+use App\Http\Controllers\Crm\BillingPeriodController;
 use App\Http\Controllers\Crm\ClientController;
 use App\Http\Controllers\Crm\ClientSubscriptionController;
 use App\Http\Controllers\Crm\EnrollmentController;
+use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\ScanController;
 use App\Http\Controllers\Crm\StaffController;
 use Illuminate\Support\Facades\Route;
@@ -36,6 +38,10 @@ Route::middleware(['auth', 'active', 'role:admin,staff'])->prefix('crm')->name('
         Route::get('/{client}/assinaturas/nova', [ClientSubscriptionController::class, 'create'])->name('subscriptions.create');
         Route::post('/{client}/assinaturas', [ClientSubscriptionController::class, 'store'])->name('subscriptions.store');
     });
+
+    Route::resource('planos', PlanController::class)->except(['show', 'destroy'])->names('plans')->parameters(['planos' => 'plan']);
+    Route::get('/periodicidades', [BillingPeriodController::class, 'edit'])->name('billing-periods.edit');
+    Route::put('/periodicidades', [BillingPeriodController::class, 'update'])->name('billing-periods.update');
 
     Route::get('/ler-qr', [ScanController::class, 'show'])->name('scan.show');
     Route::post('/scan', [ScanController::class, 'store'])->name('scan.store');
