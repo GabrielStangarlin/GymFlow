@@ -87,6 +87,27 @@ class SubscriptionService
         $subscription->update(['ended_on' => $today, 'end_reason' => EndReason::Overdue]);
     }
 
+    public function endOverdue(CarbonInterface $today): int
+    {
+        $ended = 0;
+
+        Subscription::whereNull('ended_on')
+            ->whereNotNull('paid_until')
+            ->whereDate('paid_until', '<', $today->copy()->subDays(2))
+            ->each(function (Subscription $subscription) use ($today, &$ended): void {
+                DB::transaction(function () use ($subscription, $today, &$ended): void {
+                    $locked = $this->lock($subscription);
+
+                    if ($locked->ended_on === null) {
+                        $this->endAsOverdue($locked, $today);
+                        $ended++;
+                    }
+                });
+            });
+
+        return $ended;
+    }
+
     private function classifyChange(?Subscription $previous, Plan $plan): ChangeType
     {
         if ($previous === null) {
