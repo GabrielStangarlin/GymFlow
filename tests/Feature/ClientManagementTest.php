@@ -1,0 +1,132 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Enums\EndReason;
+use App\Models\BillingPeriod;
+use App\Models\Client;
+use App\Models\Plan;
+use App\Models\Subscription;
+use App\Models\User;
+use App\Notifications\ActivateAccount;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
+use Tests\TestCase;
+
+class ClientManagementTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_search_by_name_email_or_nif(): void
+    {
+        $staff = User::factory()->staff()->create();
+        $ana = Client::factory()->for(User::factory()->state(['name' => 'Ana Zebra', 'email' => 'ana@example.com']))->create(['nif' => '111111111']);
+        Client::factory()->for(User::factory()->state(['name' => 'Rui Outro', 'email' => 'rui@example.com']))->create(['nif' => '222222222']);
+
+        foreach (['Zebra', 'ana@example', '111111111'] as $term) {
+            $this->actingAs($staff)->get(route('crm.clients.index', ['q' => $term]))
+                ->assertOk()->assertSee('Ana Zebra')->assertDontSee('Rui Outro');
+        }
+
+        $this->actingAs($staff)->get(route('crm.clients.show', $ana))->assertOk()->assertSee('Ana Zebra');
+    }
+
+    public function test_update_client_data(): void
+    {
+        $staff = User::factory()->staff()->create();
+        $client = Client::factory()->create();
+        $other = User::factory()->create(['email' => 'taken@example.com']);
+
+        $payload = ['name' => 'Novo Nome', 'email' => $client->user->email, 'phone' => '912345678', 'nif' => $client->nif, 'birth_date' => '1990-05-01'];
+
+        $this->actingAs($staff)->put(route('crm.clients.update', $client), $payload)
+            ->assertRedirect(route('crm.clients.show', $client));
+
+        $this->assertSame('Novo Nome', $client->user->fresh()->name);
+        $this->assertSame('912345678', $client->fresh()->phone);
+
+        $this->actingAs($staff)->put(route('crm.clients.update', $client), [...$payload, 'email' => $other->email])
+            ->assertSessionHasErrors('email');
+    }
+
+    public function test_cannot_deactivate_with_active_or_overdue_subscription(): void
+    {
+        $staff = User::factory()->staff()->create();
+        $active = Subscription::factory()->activeFrom(today()->toDateString())->create();
+        $overdue = Subscription::factory()->activeFrom(today()->subMonths(2)->toDateString())->create();
+
+        foreach ([$active, $overdue] as $subscription) {
+            $this->actingAs($staff)->patch(route('crm.clients.deactivate', $subscription->client))
+                ->assertSessionHasErrors('subscription');
+            $this->assertTrue($subscription->client->fresh()->active);
+            $this->assertTrue($subscription->client->user->fresh()->active);
+        }
+    }
+
+    public function test_deactivate_cancels_pending_subscription(): void
+    {
+        $staff = User::factory()->staff()->create();
+        $subscription = Subscription::factory()->pending()->create();
+        $client = $subscription->client;
+
+        $this->actingAs($staff)->patch(route('crm.clients.deactivate', $client))->assertRedirect();
+
+        $this->assertFalse($client->fresh()->active);
+        $this->assertFalse($client->user->fresh()->active);
+        $this->assertSame(EndReason::Cancelled, $subscription->fresh()->end_reason);
+    }
+
+    public function test_resend_activation_sends_notification(): void
+    {
+        Notification::fake();
+        $staff = User::factory()->staff()->create();
+        $client = Client::factory()->create();
+
+        $this->actingAs($staff)->post(route('crm.clients.resend-activation', $client))->assertRedirect();
+
+        Notification::assertSentTo($client->user, ActivateAccount::class);
+    }
+
+    public function test_new_subscription_form_reuses_client(): void
+    {
+        $staff = User::factory()->staff()->create();
+        $client = Client::factory()->create();
+        $plan = Plan::factory()->withWindow('06:00', '14:00')->create();
+        $period = BillingPeriod::factory()->create();
+
+        $this->actingAs($staff)->get(route('crm.clients.subscriptions.create', $client))
+            ->assertOk()->assertDontSee('name="nif"', false);
+
+        $this->actingAs($staff)->post(route('crm.clients.subscriptions.store', $client), [
+            'plan_id' => $plan->id,
+            'billing_period_id' => $period->id,
+            'payment_method' => 'cash',
+            'paid_now' => '1',
+        ])->assertRedirect(route('crm.clients.show', $client));
+
+        $this->assertSame(1, $client->subscriptions()->count());
+        $this->assertSame(1, Client::count());
+    }
+
+    public function test_new_subscription_blocked_message_is_shown(): void
+    {
+        $staff = User::factory()->staff()->create();
+        $client = Client::factory()->create();
+        Subscription::factory()->for($client)->create(['ended_on' => today(), 'end_reason' => EndReason::Overdue]);
+        $plan = Plan::factory()->create();
+        $period = BillingPeriod::factory()->create();
+
+        $url = route('crm.clients.subscriptions.create', $client);
+        $this->actingAs($staff)->from($url)->post(route('crm.clients.subscriptions.store', $client), [
+            'plan_id' => $plan->id,
+            'billing_period_id' => $period->id,
+            'payment_method' => 'cash',
+        ])->assertRedirect($url)->assertSessionHasErrors(['subscription' => 'O aluno tem uma dívida por regularizar.']);
+
+        $this->actingAs($staff)->followingRedirects()->from($url)->post(route('crm.clients.subscriptions.store', $client), [
+            'plan_id' => $plan->id,
+            'billing_period_id' => $period->id,
+            'payment_method' => 'cash',
+        ])->assertSee('O aluno tem uma dívida por regularizar.');
+    }
+}

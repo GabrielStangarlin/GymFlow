@@ -3,6 +3,8 @@
 use App\Http\Controllers\ActivationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ClientAreaController;
+use App\Http\Controllers\Crm\ClientController;
+use App\Http\Controllers\Crm\ClientSubscriptionController;
 use App\Http\Controllers\Crm\EnrollmentController;
 use App\Http\Controllers\Crm\ScanController;
 use App\Http\Controllers\Crm\StaffController;
@@ -23,6 +25,17 @@ Route::middleware(['auth', 'active', 'role:admin,staff'])->prefix('crm')->name('
 
     Route::get('/inscricoes/nova', [EnrollmentController::class, 'create'])->name('enrollments.create');
     Route::post('/inscricoes', [EnrollmentController::class, 'store'])->name('enrollments.store');
+
+    Route::prefix('alunos')->name('clients.')->group(function (): void {
+        Route::get('/', [ClientController::class, 'index'])->name('index');
+        Route::get('/{client}', [ClientController::class, 'show'])->name('show');
+        Route::get('/{client}/editar', [ClientController::class, 'edit'])->name('edit');
+        Route::put('/{client}', [ClientController::class, 'update'])->name('update');
+        Route::patch('/{client}/desativar', [ClientController::class, 'deactivate'])->name('deactivate');
+        Route::post('/{client}/reenviar-ativacao', [ClientController::class, 'resendActivation'])->name('resend-activation');
+        Route::get('/{client}/assinaturas/nova', [ClientSubscriptionController::class, 'create'])->name('subscriptions.create');
+        Route::post('/{client}/assinaturas', [ClientSubscriptionController::class, 'store'])->name('subscriptions.store');
+    });
 
     Route::get('/ler-qr', [ScanController::class, 'show'])->name('scan.show');
     Route::post('/scan', [ScanController::class, 'store'])->name('scan.store');

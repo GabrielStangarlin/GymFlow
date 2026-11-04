@@ -3,6 +3,9 @@
 namespace App\Models;
 
 use App\Enums\EndReason;
+use App\Enums\SubscriptionStatus;
+use App\Exceptions\SubscriptionNotAllowedException;
+use App\Services\SubscriptionService;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
@@ -53,6 +56,23 @@ class Client extends Model
             ->where('end_reason', EndReason::Overdue)
             ->whereNull('debt_settled_at')
             ->exists();
+    }
+
+    /**
+     * @throws SubscriptionNotAllowedException
+     */
+    public function deactivate(): void
+    {
+        $current = $this->currentSubscription();
+
+        match ($current?->status()) {
+            SubscriptionStatus::Active, SubscriptionStatus::Overdue => throw new SubscriptionNotAllowedException('Não é possível desativar um aluno com assinatura ativa ou em atraso.'),
+            SubscriptionStatus::Pending => app(SubscriptionService::class)->cancel($current),
+            default => null,
+        };
+
+        $this->update(['active' => false]);
+        $this->user->update(['active' => false]);
     }
 
     public function accessLogs(): HasMany
