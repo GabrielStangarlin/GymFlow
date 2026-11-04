@@ -62,7 +62,7 @@ class ClientController extends Controller
     public function deactivate(Client $client): RedirectResponse
     {
         try {
-            DB::transaction(fn () => $client->deactivate());
+            $client->deactivate();
         } catch (SubscriptionNotAllowedException $e) {
             return back()->withErrors(['subscription' => $e->getMessage()]);
         }

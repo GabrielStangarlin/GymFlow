@@ -15,8 +15,12 @@ use Illuminate\View\View;
 
 class ClientSubscriptionController extends Controller
 {
-    public function create(Client $client): View
+    public function create(Client $client): View|RedirectResponse
     {
+        if (! $client->active) {
+            return $this->inactiveResponse($client);
+        }
+
         return view('crm.clients.subscriptions.create', [
             'client' => $client->load('user'),
             'plans' => Plan::where('active', true)->orderBy('name')->get(),
@@ -27,6 +31,10 @@ class ClientSubscriptionController extends Controller
 
     public function store(StoreClientSubscriptionRequest $request, Client $client, SubscriptionService $subscriptions): RedirectResponse
     {
+        if (! $client->active) {
+            return $this->inactiveResponse($client);
+        }
+
         $data = $request->validated();
 
         try {
@@ -43,5 +51,10 @@ class ClientSubscriptionController extends Controller
         }
 
         return redirect()->route('crm.clients.show', $client)->with('status', 'Assinatura criada.');
+    }
+
+    private function inactiveResponse(Client $client): RedirectResponse
+    {
+        return redirect()->route('crm.clients.show', $client)->withErrors(['subscription' => 'O aluno está desativado.']);
     }
 }

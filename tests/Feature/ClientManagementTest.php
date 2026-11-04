@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ChangeType;
 use App\Enums\EndReason;
 use App\Models\BillingPeriod;
 use App\Models\Client;
@@ -28,7 +29,34 @@ class ClientManagementTest extends TestCase
                 ->assertOk()->assertSee('Ana Zebra')->assertDontSee('Rui Outro');
         }
 
-        $this->actingAs($staff)->get(route('crm.clients.show', $ana))->assertOk()->assertSee('Ana Zebra');
+        $plan = Plan::factory()->create();
+        Subscription::factory()->for($ana)->for($plan)->activeFrom(today()->toDateString())->create(['change_type' => ChangeType::Upgrade]);
+
+        $this->actingAs($staff)->get(route('crm.clients.show', $ana))
+            ->assertOk()->assertSee('Ana Zebra')->assertSee('Ativa')->assertSee(ChangeType::Upgrade->label());
+    }
+
+    public function test_client_role_cannot_access_client_list(): void
+    {
+        $this->actingAs(User::factory()->create())->get(route('crm.clients.index'))->assertForbidden();
+    }
+
+    public function test_cannot_create_subscription_for_deactivated_client(): void
+    {
+        $staff = User::factory()->staff()->create();
+        $client = Client::factory()->create(['active' => false]);
+        $plan = Plan::factory()->create();
+        $period = BillingPeriod::factory()->create();
+
+        $this->actingAs($staff)->get(route('crm.clients.subscriptions.create', $client))
+            ->assertRedirect(route('crm.clients.show', $client))->assertSessionHasErrors(['subscription' => 'O aluno está desativado.']);
+
+        $this->actingAs($staff)->post(route('crm.clients.subscriptions.store', $client), [
+            'plan_id' => $plan->id, 'billing_period_id' => $period->id, 'payment_method' => 'cash',
+        ])->assertSessionHasErrors('subscription');
+
+        $this->assertSame(0, $client->subscriptions()->count());
+        $this->actingAs($staff)->get(route('crm.clients.show', $client))->assertDontSee('Nova assinatura');
     }
 
     public function test_update_client_data(): void

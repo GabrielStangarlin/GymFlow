@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 #[Fillable(['user_id', 'phone', 'nif', 'birth_date', 'qr_token', 'active'])]
 class Client extends Model
@@ -63,16 +64,18 @@ class Client extends Model
      */
     public function deactivate(): void
     {
-        $current = $this->currentSubscription();
+        DB::transaction(function (): void {
+            $current = $this->currentSubscription();
 
-        match ($current?->status()) {
-            SubscriptionStatus::Active, SubscriptionStatus::Overdue => throw new SubscriptionNotAllowedException('Não é possível desativar um aluno com assinatura ativa ou em atraso.'),
-            SubscriptionStatus::Pending => app(SubscriptionService::class)->cancel($current),
-            default => null,
-        };
+            match ($current?->status()) {
+                SubscriptionStatus::Active, SubscriptionStatus::Overdue => throw new SubscriptionNotAllowedException('Não é possível desativar um aluno com assinatura ativa ou em atraso.'),
+                SubscriptionStatus::Pending => app(SubscriptionService::class)->cancel($current),
+                default => null,
+            };
 
-        $this->update(['active' => false]);
-        $this->user->update(['active' => false]);
+            $this->update(['active' => false]);
+            $this->user->update(['active' => false]);
+        });
     }
 
     public function accessLogs(): HasMany

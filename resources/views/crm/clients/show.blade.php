@@ -7,7 +7,9 @@
         <h1 class="text-2xl font-bold">{{ $client->user->name }} @unless ($client->active)<span class="text-sm text-gray-500">(inativo)</span>@endunless</h1>
         <div class="flex flex-wrap gap-2">
             <a href="{{ route('crm.clients.edit', $client) }}" class="rounded border px-3 py-2">Editar</a>
-            <a href="{{ route('crm.clients.subscriptions.create', $client) }}" class="rounded border px-3 py-2">Nova assinatura</a>
+            @if ($client->active)
+                <a href="{{ route('crm.clients.subscriptions.create', $client) }}" class="rounded border px-3 py-2">Nova assinatura</a>
+            @endif
             <form method="POST" action="{{ route('crm.clients.resend-activation', $client) }}">
                 @csrf
                 <button type="submit" class="rounded border px-3 py-2 disabled:opacity-50">Reenviar email de ativação</button>
