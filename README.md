@@ -35,7 +35,7 @@ php artisan schedule:work
 npm run dev      # ou, uma vez: npm run build
 ```
 
-`composer dev` (comando `php artisan dev`) arranca os processos de desenvolvimento num só terminal.
+`composer dev` arranca o servidor, a fila e o Vite num só terminal, mas não o `schedule:work`: este tem de continuar a correr noutro terminal (`php artisan schedule:work`), pois é ele que termina automaticamente as assinaturas em atraso.
 
 Emails (ativação de conta) em http://localhost:8025.
 
