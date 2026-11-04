@@ -7,6 +7,7 @@ use App\Http\Controllers\Crm\AccessLogController;
 use App\Http\Controllers\Crm\BillingPeriodController;
 use App\Http\Controllers\Crm\ClientController;
 use App\Http\Controllers\Crm\ClientSubscriptionController;
+use App\Http\Controllers\Crm\DashboardController;
 use App\Http\Controllers\Crm\EnrollmentController;
 use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\ScanController;
@@ -25,7 +26,7 @@ Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')-
 Route::get('/', [LoginController::class, 'home'])->middleware(['auth', 'active'])->name('home');
 
 Route::middleware(['auth', 'active', 'role:admin,staff'])->prefix('crm')->name('crm.')->group(function (): void {
-    Route::view('/', 'crm.dashboard')->name('dashboard');
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/inscricoes/nova', [EnrollmentController::class, 'create'])->name('enrollments.create');
     Route::post('/inscricoes', [EnrollmentController::class, 'store'])->name('enrollments.store');
