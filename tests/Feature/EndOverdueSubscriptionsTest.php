@@ -43,4 +43,20 @@ class EndOverdueSubscriptionsTest extends TestCase
 
         $this->assertNull($subscription->fresh()->ended_on);
     }
+
+    public function test_command_reports_count_and_ignores_ended_and_paid_up_subscriptions(): void
+    {
+        $this->travelTo('2027-02-13 10:00');
+        $overdue = Subscription::factory()->count(2)->activeFrom('2027-01-10')->create();
+        $paidUp = Subscription::factory()->activeFrom('2027-02-01')->create();
+        $alreadyEnded = Subscription::factory()->activeFrom('2027-01-10')->create(['ended_on' => '2027-02-11', 'end_reason' => EndReason::Overdue]);
+
+        $this->artisan('gymflow:end-overdue')
+            ->expectsOutput('Assinaturas terminadas: 2')
+            ->assertSuccessful();
+
+        $this->assertNull($paidUp->fresh()->ended_on);
+        $this->assertSame('2027-02-11', $alreadyEnded->fresh()->ended_on->toDateString());
+        $overdue->each(fn (Subscription $subscription) => $this->assertSame('2027-02-13', $subscription->fresh()->ended_on->toDateString()));
+    }
 }

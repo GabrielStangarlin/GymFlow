@@ -91,14 +91,17 @@ class SubscriptionService
     {
         $ended = 0;
 
+        $cutoff = $today->copy()->subDays(2)->toDateString();
+
         Subscription::whereNull('ended_on')
             ->whereNotNull('paid_until')
-            ->whereDate('paid_until', '<', $today->copy()->subDays(2))
-            ->each(function (Subscription $subscription) use ($today, &$ended): void {
-                DB::transaction(function () use ($subscription, $today, &$ended): void {
+            ->whereDate('paid_until', '<', $cutoff)
+            ->lazyById()
+            ->each(function (Subscription $subscription) use ($today, $cutoff, &$ended): void {
+                DB::transaction(function () use ($subscription, $today, $cutoff, &$ended): void {
                     $locked = $this->lock($subscription);
 
-                    if ($locked->ended_on === null) {
+                    if ($locked->ended_on === null && $locked->paid_until?->toDateString() < $cutoff) {
                         $this->endAsOverdue($locked, $today);
                         $ended++;
                     }
