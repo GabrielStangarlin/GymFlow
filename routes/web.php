@@ -1,12 +1,16 @@
 <?php
 
+use App\Http\Controllers\ActivationController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Crm\EnrollmentController;
 use App\Http\Controllers\Crm\StaffController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [LoginController::class, 'create'])->name('login');
     Route::post('/login', [LoginController::class, 'store']);
+    Route::get('/ativar/{token}', [ActivationController::class, 'show'])->name('activation.show');
+    Route::post('/ativar', [ActivationController::class, 'store'])->name('activation.store');
 });
 
 Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')->name('logout');
@@ -14,6 +18,9 @@ Route::get('/', [LoginController::class, 'home'])->middleware(['auth', 'active']
 
 Route::middleware(['auth', 'active', 'role:admin,staff'])->prefix('crm')->name('crm.')->group(function (): void {
     Route::view('/', 'crm.dashboard')->name('dashboard');
+
+    Route::get('/inscricoes/nova', [EnrollmentController::class, 'create'])->name('enrollments.create');
+    Route::post('/inscricoes', [EnrollmentController::class, 'store'])->name('enrollments.store');
 
     Route::middleware('role:admin')->prefix('funcionarios')->name('staff.')->group(function (): void {
         Route::get('/', [StaffController::class, 'index'])->name('index');
