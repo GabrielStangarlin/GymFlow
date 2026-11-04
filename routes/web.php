@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Crm\StaffController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
@@ -13,6 +14,14 @@ Route::get('/', [LoginController::class, 'home'])->middleware(['auth', 'active']
 
 Route::middleware(['auth', 'active', 'role:admin,staff'])->prefix('crm')->name('crm.')->group(function (): void {
     Route::view('/', 'crm.dashboard')->name('dashboard');
+
+    Route::middleware('role:admin')->prefix('funcionarios')->name('staff.')->group(function (): void {
+        Route::get('/', [StaffController::class, 'index'])->name('index');
+        Route::get('/novo', [StaffController::class, 'create'])->name('create');
+        Route::post('/', [StaffController::class, 'store'])->name('store');
+        Route::patch('/{user}/desativar', [StaffController::class, 'deactivate'])->name('deactivate');
+        Route::patch('/{user}/ativar', [StaffController::class, 'activate'])->name('activate');
+    });
 });
 
 Route::middleware(['auth', 'active', 'role:client'])->group(function (): void {
