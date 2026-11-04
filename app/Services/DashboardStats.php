@@ -33,7 +33,7 @@ class DashboardStats
             ->orderBy('scanned_at')->orderBy('id')
             ->get()
             ->groupBy('client_id')
-            ->filter(fn ($logs) => $logs->last()->type === AccessType::Entry)
+            ->filter(fn ($logs) => $logs->last()->type === AccessType::Entry && now()->lt($logs->last()->scanned_at->copy()->addHours(2)))
             ->count();
 
         return [

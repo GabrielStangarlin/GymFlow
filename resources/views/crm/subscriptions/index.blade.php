@@ -30,17 +30,7 @@
                     <td class="p-2"><span class="rounded-full px-2 py-0.5 text-sm {{ $pillClasses[$state->value] }}">{{ $state->label() }}</span></td>
                     <td class="p-2">{{ $subscription->paid_until?->format('d/m/Y') ?? '—' }}</td>
                     <td class="p-2">
-                        <div class="flex flex-wrap gap-2">
-                            @if ($state->value !== 'ended')
-                                <form method="POST" action="{{ route('crm.subscriptions.pay', $subscription) }}">@csrf<button type="submit" class="rounded border px-2 py-1 disabled:opacity-50">Marcar como pago</button></form>
-                            @endif
-                            @if ($subscription->hasOutstandingDebt())
-                                <form method="POST" action="{{ route('crm.subscriptions.settle-debt', $subscription) }}">@csrf<button type="submit" class="rounded border px-2 py-1 disabled:opacity-50">Marcar dívida como paga</button></form>
-                            @endif
-                            @if ($state->value === 'pending')
-                                <form method="POST" action="{{ route('crm.subscriptions.cancel', $subscription) }}">@csrf<button type="submit" class="rounded border border-red-600 text-red-700 px-2 py-1 disabled:opacity-50">Cancelar</button></form>
-                            @endif
-                        </div>
+                        @include('crm.subscriptions._actions', ['subscription' => $subscription])
                     </td>
                 </tr>
             @empty

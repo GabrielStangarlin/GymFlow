@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [LoginController::class, 'create'])->name('login');
-    Route::post('/login', [LoginController::class, 'store']);
+    Route::post('/login', [LoginController::class, 'store'])->middleware('throttle:5,1');
     Route::get('/ativar/{token}', [ActivationController::class, 'show'])->name('activation.show');
     Route::post('/ativar', [ActivationController::class, 'store'])->name('activation.store');
 });
@@ -37,6 +37,7 @@ Route::middleware(['auth', 'active', 'role:admin,staff'])->prefix('crm')->name('
         Route::get('/{client}/editar', [ClientController::class, 'edit'])->name('edit');
         Route::put('/{client}', [ClientController::class, 'update'])->name('update');
         Route::patch('/{client}/desativar', [ClientController::class, 'deactivate'])->name('deactivate');
+        Route::patch('/{client}/ativar', [ClientController::class, 'activate'])->name('activate');
         Route::post('/{client}/reenviar-ativacao', [ClientController::class, 'resendActivation'])->name('resend-activation');
         Route::get('/{client}/assinaturas/nova', [ClientSubscriptionController::class, 'create'])->name('subscriptions.create');
         Route::post('/{client}/assinaturas', [ClientSubscriptionController::class, 'store'])->name('subscriptions.store');

@@ -44,8 +44,10 @@ class DashboardStatsTest extends TestCase
         $left = Client::factory()->create();
         $this->log($left, AccessType::Entry, '2026-11-04 08:00');
         $this->log($left, AccessType::Exit, '2026-11-04 09:00');
-        $this->log($inside, AccessType::Entry, '2026-11-04 10:00');
+        $this->log($inside, AccessType::Entry, '2026-11-04 11:00');
         $this->log($inside, AccessType::Refused, '2026-11-04 10:30');
+        $stale = Client::factory()->create();
+        $this->log($stale, AccessType::Entry, '2026-11-04 09:00');
         $this->log($left, AccessType::Refused, '2026-11-03 10:30');
 
         $this->assertSame(
@@ -143,6 +145,7 @@ class DashboardStatsTest extends TestCase
 
         $this->get(route('crm.dashboard', ['from' => '2026-11-01', 'to' => '2026-11-05']))->assertSessionHasErrors('to');
         $this->get(route('crm.dashboard', ['from' => '2025-01-01', 'to' => '2026-11-04']))->assertSessionHasErrors('to');
+        $this->get(route('crm.dashboard', ['from' => '2000-01-01']))->assertSessionHasErrors('to');
     }
 
     public function test_dashboard_page_renders(): void

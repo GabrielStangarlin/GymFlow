@@ -80,4 +80,16 @@ class PlanManagementTest extends TestCase
             ->put(route('crm.billing-periods.update'), ['discounts' => [$period->id => '120']])
             ->assertSessionHasErrors("discounts.{$period->id}");
     }
+
+    public function test_plan_name_must_be_unique_but_update_may_keep_own_name(): void
+    {
+        $staff = User::factory()->staff()->create();
+        $plan = Plan::factory()->withWindow('06:00', '14:00')->create(['name' => 'Manhã']);
+        Plan::factory()->create(['name' => 'Total']);
+        $payload = ['name' => 'Manhã', 'monthly_price' => '30.00', 'windows' => [['starts_at' => '06:00', 'ends_at' => '12:00']]];
+
+        $this->actingAs($staff)->post(route('crm.plans.store'), $payload)->assertSessionHasErrors('name');
+        $this->actingAs($staff)->put(route('crm.plans.update', $plan), $payload)->assertSessionDoesntHaveErrors();
+        $this->actingAs($staff)->put(route('crm.plans.update', $plan), [...$payload, 'name' => 'Total'])->assertSessionHasErrors('name');
+    }
 }

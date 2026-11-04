@@ -15,10 +15,16 @@
                 <button type="submit" class="rounded border px-3 py-2 disabled:opacity-50">Reenviar email de ativação</button>
             </form>
             @if ($client->active)
-                <form method="POST" action="{{ route('crm.clients.deactivate', $client) }}">
+                <form method="POST" action="{{ route('crm.clients.deactivate', $client) }}" onsubmit="return confirm('Desativar este aluno?')">
                     @csrf
                     @method('PATCH')
                     <button type="submit" class="rounded border border-red-600 text-red-700 px-3 py-2 disabled:opacity-50">Desativar</button>
+                </form>
+            @else
+                <form method="POST" action="{{ route('crm.clients.activate', $client) }}">
+                    @csrf
+                    @method('PATCH')
+                    <button type="submit" class="rounded border px-3 py-2 disabled:opacity-50">Ativar</button>
                 </form>
             @endif
         </div>
@@ -38,9 +44,17 @@
         <p>{{ $current->plan->name }} · {{ $current->billingPeriod->name }}
             <span class="ml-2 rounded-full bg-gray-200 px-2 py-0.5 text-sm">{{ $current->status()->label() }}</span>
             @if ($current->paid_until) · pago até {{ $current->paid_until->format('d/m/Y') }}@endif</p>
+        <div class="mt-2">@include('crm.subscriptions._actions', ['subscription' => $current])</div>
     @else
         <p class="text-gray-600">Sem assinatura atual.</p>
     @endif
+
+    @foreach ($client->subscriptions->filter->hasOutstandingDebt() as $indebted)
+        <div class="mt-4 rounded bg-red-50 p-3">
+            <p class="font-semibold text-red-800">Dívida por regularizar: {{ number_format($indebted->amountPerPeriod(), 2, ',', ' ') }} € ({{ $indebted->plan->name }})</p>
+            <div class="mt-2">@include('crm.subscriptions._actions', ['subscription' => $indebted])</div>
+        </div>
+    @endforeach
 
     <h2 class="text-lg font-semibold mt-6 mb-2">Histórico de assinaturas</h2>
     <table class="w-full text-left">

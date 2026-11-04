@@ -49,7 +49,7 @@ class SubscriptionPaymentTest extends TestCase
         $this->travelTo('2027-01-10 10:00');
         $subscription = Subscription::factory()->pending()->create();
         $this->service()->recordPayment($subscription, $this->staff());
-        $this->travelTo('2027-02-15 10:00');
+        $this->travelTo('2027-02-12 10:00');
 
         $payment = $this->service()->recordPayment($subscription, $this->staff());
 
@@ -191,5 +191,31 @@ class SubscriptionPaymentTest extends TestCase
 
         $this->assertSame(1, $subscription->payments()->where('type', PaymentType::Period)->count());
         $this->assertSame(2, $subscription->payments()->count());
+    }
+
+    public function test_payment_one_day_late_continues_same_cycle(): void
+    {
+        $subscription = Subscription::factory()->activeFrom('2027-01-10')->create();
+        $this->travelTo('2027-02-11 10:00');
+
+        $this->service()->recordPayment($subscription, $this->staff());
+
+        $this->assertNull($subscription->fresh()->ended_on);
+        $this->assertSame('2027-03-10', $subscription->fresh()->paid_until->toDateString());
+    }
+
+    public function test_payment_past_grace_ends_subscription_with_debt(): void
+    {
+        $subscription = Subscription::factory()->activeFrom('2027-01-10')->create();
+        $this->travelTo('2027-02-15 10:00');
+
+        try {
+            $this->service()->recordPayment($subscription, $this->staff());
+            $this->fail('Expected exception.');
+        } catch (SubscriptionNotAllowedException) {
+            $subscription->refresh();
+            $this->assertSame(EndReason::Overdue, $subscription->end_reason);
+            $this->assertTrue($subscription->hasOutstandingDebt());
+        }
     }
 }

@@ -36,10 +36,11 @@ class DashboardFilterRequest extends FormRequest
     public function after(): array
     {
         return [function (Validator $validator): void {
-            if ($validator->errors()->isNotEmpty() || ! $this->filled(['from', 'to'])) {
+            if ($validator->errors()->isNotEmpty() || ! $this->filled('from')) {
                 return;
             }
-            if (Carbon::parse($this->input('from'))->diffInDays(Carbon::parse($this->input('to'))) > 366) {
+            $to = $this->filled('to') ? Carbon::parse($this->input('to')) : today();
+            if (Carbon::parse($this->input('from'))->diffInDays($to) > 366) {
                 $validator->errors()->add('to', 'O período não pode exceder 366 dias.');
             }
         }];

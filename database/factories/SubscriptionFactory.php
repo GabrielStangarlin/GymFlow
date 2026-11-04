@@ -48,6 +48,7 @@ class SubscriptionFactory extends Factory
             'starts_on' => $date,
             'paid_until' => Carbon::parse($date)->addMonthNoOverflow()->toDateString(),
         ])->afterCreating(function (Subscription $subscription): void {
+            $subscription->update(['paid_until' => Carbon::parse($subscription->starts_on)->addMonthsNoOverflow($subscription->billingPeriod->months)->toDateString()]);
             $subscription->payments()->create([
                 'amount' => $subscription->amountPerPeriod(),
                 'type' => PaymentType::Period,

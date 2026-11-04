@@ -43,6 +43,8 @@ Emails (ativação de conta) em http://localhost:8025.
 
 Administrador criado pelo seeder: `admin@gymflow.test` / `password`.
 
+Alterar a palavra-passe do administrador de seed antes de qualquer utilização fora do desenvolvimento.
+
 ## Câmara
 
 A leitura de QR só funciona em `http://localhost` ou HTTPS. Para testar a partir de um telemóvel na rede local, usar um túnel HTTPS.

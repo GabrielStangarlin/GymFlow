@@ -20,7 +20,7 @@
                     <td class="p-2">{{ $user->role->label() }}</td>
                     <td class="p-2">{{ $user->active ? 'Ativo' : 'Inativo' }}</td>
                     <td class="p-2">
-                        <form method="POST" action="{{ route($user->active ? 'crm.staff.deactivate' : 'crm.staff.activate', $user) }}">
+                        <form method="POST" action="{{ route($user->active ? 'crm.staff.deactivate' : 'crm.staff.activate', $user) }}" @if ($user->active) onsubmit="return confirm('Desativar este funcionário?')" @endif>
                             @csrf
                             @method('PATCH')
                             <button type="submit" class="rounded border px-3 py-1 disabled:opacity-50">{{ $user->active ? 'Desativar' : 'Ativar' }}</button>

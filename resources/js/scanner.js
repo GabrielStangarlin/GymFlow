@@ -55,13 +55,21 @@ if (root) {
                     },
                     body: JSON.stringify({ token }),
                 });
+                if (response.status === 401 || response.status === 419) {
+                    throw new Error('session');
+                }
                 if (!response.ok) {
                     throw new Error(response.status);
                 }
                 const data = await response.json();
                 show(colours[data.type] ?? 'bg-gray-700', data.type_label, [data.client_name, data.reason_label]);
-            } catch {
-                show('bg-amber-600', 'Erro de comunicação', ['Não foi possível validar o QR. Tente novamente.']);
+            } catch (error) {
+                // A login redirect yields HTML, which makes response.json() throw a SyntaxError.
+                if (error.message === 'session' || error instanceof SyntaxError) {
+                    show('bg-amber-600', 'Sessão expirada', ['Sessão expirada — recarregue a página.']);
+                } else {
+                    show('bg-amber-600', 'Erro de comunicação', ['Não foi possível validar o QR. Tente novamente.']);
+                }
             }
             setTimeout(() => {
                 result.className = 'hidden';

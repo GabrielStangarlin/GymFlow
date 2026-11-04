@@ -30,21 +30,7 @@ class SubscriptionService
         bool $paidNow,
         User $recordedBy,
     ): Subscription {
-        // The daily command may not have run yet. Committed on its own so the debt survives the exception below.
-        DB::transaction(function () use ($client): void {
-            $this->lockClient($client);
-            $current = $client->currentSubscription();
-
-            if ($current?->paid_until === null) {
-                return;
-            }
-
-            $locked = $this->lock($current);
-
-            if ($locked->ended_on === null && $locked->paid_until->toDateString() < today()->subDays(2)->toDateString()) {
-                $this->endAsOverdue($locked, today());
-            }
-        });
+        $this->endIfPastGrace($client->currentSubscription());
 
         return DB::transaction(function () use ($client, $plan, $billingPeriod, $paymentMethod, $paidNow, $recordedBy): Subscription {
             $this->lockClient($client);
@@ -79,6 +65,30 @@ class SubscriptionService
             }
 
             return $subscription;
+        });
+    }
+
+    /**
+     * The daily command may not have run yet. Committed on its own so the debt survives a later exception.
+     */
+    public function endIfPastGrace(?Subscription $subscription): bool
+    {
+        if ($subscription?->paid_until === null) {
+            return false;
+        }
+
+        return DB::transaction(function () use ($subscription): bool {
+            $this->lockClient($subscription->client);
+            $locked = $this->lock($subscription);
+
+            if ($locked->ended_on !== null || $locked->paid_until->toDateString() >= today()->subDays(2)->toDateString()) {
+                return false;
+            }
+
+            $this->endAsOverdue($locked, today());
+            $subscription->refresh();
+
+            return true;
         });
     }
 
@@ -133,6 +143,10 @@ class SubscriptionService
      */
     public function recordPayment(Subscription $subscription, User $recordedBy): Payment
     {
+        if ($this->endIfPastGrace($subscription)) {
+            throw new SubscriptionNotAllowedException('A assinatura terminou por falta de pagamento. Regularize a dívida e crie uma nova assinatura.');
+        }
+
         return DB::transaction(function () use ($subscription, $recordedBy): Payment {
             $locked = $this->lock($subscription);
 

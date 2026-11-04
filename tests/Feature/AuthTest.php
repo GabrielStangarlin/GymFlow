@@ -64,4 +64,13 @@ class AuthTest extends TestCase
             ->get(route('crm.dashboard'))
             ->assertDontSee('Funcionários');
     }
+
+    public function test_login_is_throttled_after_five_attempts(): void
+    {
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this->post(route('login'), ['email' => 'x@example.com', 'password' => 'wrong'])->assertStatus(302);
+        }
+
+        $this->post(route('login'), ['email' => 'x@example.com', 'password' => 'wrong'])->assertStatus(429);
+    }
 }

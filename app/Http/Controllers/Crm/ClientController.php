@@ -70,8 +70,19 @@ class ClientController extends Controller
         return back()->with('status', 'Aluno desativado.');
     }
 
+    public function activate(Client $client): RedirectResponse
+    {
+        $client->activate();
+
+        return back()->with('status', 'Aluno reativado.');
+    }
+
     public function resendActivation(Client $client): RedirectResponse
     {
+        if (! $client->active) {
+            return back()->withErrors(['subscription' => 'Não é possível reenviar o email de ativação a um aluno inativo.']);
+        }
+
         $client->user->sendActivationNotification();
 
         return back()->with('status', 'Email de ativação reenviado.');

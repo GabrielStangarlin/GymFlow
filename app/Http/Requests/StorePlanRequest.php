@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class StorePlanRequest extends FormRequest
@@ -13,7 +14,7 @@ class StorePlanRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255', Rule::unique('plans', 'name')->ignore($this->route('plan'))],
             'monthly_price' => ['required', 'numeric', 'min:0', 'max:999999.99'],
             'active' => ['sometimes', 'boolean'],
             'windows' => ['required', 'array', 'min:1'],

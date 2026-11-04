@@ -64,6 +64,8 @@ class Client extends Model
      */
     public function deactivate(): void
     {
+        app(SubscriptionService::class)->endIfPastGrace($this->currentSubscription());
+
         DB::transaction(function (): void {
             $current = $this->currentSubscription();
 
@@ -75,6 +77,14 @@ class Client extends Model
 
             $this->update(['active' => false]);
             $this->user->update(['active' => false]);
+        });
+    }
+
+    public function activate(): void
+    {
+        DB::transaction(function (): void {
+            $this->update(['active' => true]);
+            $this->user->update(['active' => true]);
         });
     }
 

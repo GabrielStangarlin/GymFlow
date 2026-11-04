@@ -81,7 +81,7 @@ class ClientManagementTest extends TestCase
     {
         $staff = User::factory()->staff()->create();
         $active = Subscription::factory()->activeFrom(today()->toDateString())->create();
-        $overdue = Subscription::factory()->activeFrom(today()->subMonths(2)->toDateString())->create();
+        $overdue = Subscription::factory()->activeFrom(today()->subMonth()->subDay()->toDateString())->create();
 
         foreach ([$active, $overdue] as $subscription) {
             $this->actingAs($staff)->patch(route('crm.clients.deactivate', $subscription->client))
@@ -156,5 +156,58 @@ class ClientManagementTest extends TestCase
             'billing_period_id' => $period->id,
             'payment_method' => 'cash',
         ])->assertSee('O aluno tem uma dívida por regularizar.');
+    }
+
+    public function test_deactivate_allowed_when_subscription_is_past_grace_and_ends_with_debt(): void
+    {
+        $staff = User::factory()->staff()->create();
+        $subscription = Subscription::factory()->activeFrom(today()->subMonths(2)->toDateString())->create();
+        $client = $subscription->client;
+
+        $this->actingAs($staff)->patch(route('crm.clients.deactivate', $client))->assertSessionDoesntHaveErrors();
+
+        $this->assertFalse($client->fresh()->active);
+        $this->assertSame(EndReason::Overdue, $subscription->fresh()->end_reason);
+    }
+
+    public function test_activate_reactivates_client_and_allows_new_subscription(): void
+    {
+        $staff = User::factory()->staff()->create();
+        $client = Client::factory()->create();
+        $client->deactivate();
+        $plan = Plan::factory()->withWindow('06:00', '14:00')->create();
+        $period = BillingPeriod::factory()->create();
+
+        $this->actingAs($staff)->patch(route('crm.clients.activate', $client))->assertSessionHas('status', 'Aluno reativado.');
+
+        $this->assertTrue($client->fresh()->active);
+        $this->assertTrue($client->user->fresh()->active);
+        $this->actingAs($staff)->post(route('crm.clients.subscriptions.store', $client), [
+            'plan_id' => $plan->id, 'billing_period_id' => $period->id, 'payment_method' => 'cash',
+        ])->assertSessionDoesntHaveErrors();
+        $this->assertSame(1, $client->subscriptions()->count());
+    }
+
+    public function test_resend_activation_refused_for_inactive_client(): void
+    {
+        Notification::fake();
+        $client = Client::factory()->create();
+        $client->deactivate();
+
+        $this->actingAs(User::factory()->staff()->create())->post(route('crm.clients.resend-activation', $client))
+            ->assertSessionHasErrors('subscription');
+
+        Notification::assertNothingSent();
+    }
+
+    public function test_client_page_shows_subscription_actions_and_debt(): void
+    {
+        $staff = User::factory()->staff()->create();
+        $client = Client::factory()->create();
+        Subscription::factory()->for($client)->activeFrom('2020-01-10')->create(['ended_on' => '2020-03-01', 'end_reason' => EndReason::Overdue]);
+        Subscription::factory()->for($client)->activeFrom(today()->toDateString())->create();
+
+        $this->actingAs($staff)->get(route('crm.clients.show', $client))
+            ->assertSee('Marcar como pago')->assertSee('Marcar dívida como paga')->assertSee('Dívida por regularizar');
     }
 }
