@@ -9,6 +9,8 @@ use App\Enums\SubscriptionStatus;
 use Carbon\CarbonInterface;
 use Database\Factories\SubscriptionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -65,6 +67,24 @@ class Subscription extends Model
     public function previous(): BelongsTo
     {
         return $this->belongsTo(self::class, 'previous_subscription_id');
+    }
+
+    /**
+     * @param  Builder<Subscription>  $query
+     */
+    #[Scope]
+    protected function withStatus(Builder $query, string $status): void
+    {
+        $today = today()->toDateString();
+
+        match ($status) {
+            'pending' => $query->whereNull('ended_on')->whereNull('paid_until'),
+            'active' => $query->whereNull('ended_on')->whereDate('paid_until', '>=', $today),
+            'overdue' => $query->whereNull('ended_on')->whereDate('paid_until', '<', $today),
+            'ended' => $query->whereNotNull('ended_on'),
+            'debt' => $query->where('end_reason', EndReason::Overdue)->whereNull('debt_settled_at'),
+            default => null,
+        };
     }
 
     public function status(?CarbonInterface $today = null): SubscriptionStatus

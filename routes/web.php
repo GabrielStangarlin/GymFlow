@@ -10,6 +10,7 @@ use App\Http\Controllers\Crm\EnrollmentController;
 use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\ScanController;
 use App\Http\Controllers\Crm\StaffController;
+use App\Http\Controllers\Crm\SubscriptionController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
@@ -37,6 +38,13 @@ Route::middleware(['auth', 'active', 'role:admin,staff'])->prefix('crm')->name('
         Route::post('/{client}/reenviar-ativacao', [ClientController::class, 'resendActivation'])->name('resend-activation');
         Route::get('/{client}/assinaturas/nova', [ClientSubscriptionController::class, 'create'])->name('subscriptions.create');
         Route::post('/{client}/assinaturas', [ClientSubscriptionController::class, 'store'])->name('subscriptions.store');
+    });
+
+    Route::prefix('assinaturas')->name('subscriptions.')->group(function (): void {
+        Route::get('/', [SubscriptionController::class, 'index'])->name('index');
+        Route::post('/{subscription}/pagar', [SubscriptionController::class, 'pay'])->name('pay');
+        Route::post('/{subscription}/regularizar-divida', [SubscriptionController::class, 'settleDebt'])->name('settle-debt');
+        Route::post('/{subscription}/cancelar', [SubscriptionController::class, 'cancel'])->name('cancel');
     });
 
     Route::resource('planos', PlanController::class)->except(['show', 'destroy'])->names('plans')->parameters(['planos' => 'plan']);
