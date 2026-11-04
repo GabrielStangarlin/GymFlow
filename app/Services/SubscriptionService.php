@@ -2,17 +2,98 @@
 
 namespace App\Services;
 
+use App\Enums\ChangeType;
 use App\Enums\EndReason;
+use App\Enums\PaymentMethod;
 use App\Enums\PaymentType;
 use App\Enums\SubscriptionStatus;
 use App\Exceptions\SubscriptionNotAllowedException;
+use App\Models\BillingPeriod;
+use App\Models\Client;
 use App\Models\Payment;
+use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 
 class SubscriptionService
 {
+    /**
+     * @throws SubscriptionNotAllowedException
+     */
+    public function create(
+        Client $client,
+        Plan $plan,
+        BillingPeriod $billingPeriod,
+        PaymentMethod $paymentMethod,
+        bool $paidNow,
+        User $recordedBy,
+    ): Subscription {
+        $current = $client->currentSubscription();
+
+        // The daily command may not have run yet. Committed on its own so the debt survives the exception below.
+        if ($current?->paid_until !== null && $current->paid_until->toDateString() < today()->subDays(2)->toDateString()) {
+            $this->endAsOverdue($current, today());
+        }
+
+        return DB::transaction(function () use ($client, $plan, $billingPeriod, $paymentMethod, $paidNow, $recordedBy): Subscription {
+            $current = $client->currentSubscription();
+
+            if ($client->hasOutstandingDebt()) {
+                throw new SubscriptionNotAllowedException('O aluno tem uma dívida por regularizar.');
+            }
+
+            if ($current !== null) {
+                match ($current->status()) {
+                    SubscriptionStatus::Active => throw new SubscriptionNotAllowedException('A assinatura atual ainda não terminou.'),
+                    SubscriptionStatus::Pending => throw new SubscriptionNotAllowedException('Cancele primeiro a assinatura pendente.'),
+                    default => $current->update(['ended_on' => today(), 'end_reason' => EndReason::Replaced]),
+                };
+            }
+
+            $previous = $client->subscriptions()->whereNotNull('starts_on')->latest('id')->with('plan')->first();
+
+            $subscription = $client->subscriptions()->create([
+                'plan_id' => $plan->id,
+                'billing_period_id' => $billingPeriod->id,
+                'payment_method' => $paymentMethod,
+                'monthly_price' => $plan->monthly_price,
+                'discount_percent' => $billingPeriod->discount_percent,
+                'change_type' => $this->classifyChange($previous, $plan),
+                'previous_subscription_id' => $previous?->id,
+            ]);
+
+            if ($paidNow) {
+                $this->recordPayment($subscription, $recordedBy);
+            }
+
+            return $subscription;
+        });
+    }
+
+    public function endAsOverdue(Subscription $subscription, CarbonInterface $today): void
+    {
+        $subscription->update(['ended_on' => $today, 'end_reason' => EndReason::Overdue]);
+    }
+
+    private function classifyChange(?Subscription $previous, Plan $plan): ChangeType
+    {
+        if ($previous === null) {
+            return ChangeType::New;
+        }
+
+        if ($previous->plan_id === $plan->id) {
+            return ChangeType::Renewal;
+        }
+
+        return match ((float) $plan->monthly_price <=> (float) $previous->plan->monthly_price) {
+            1 => ChangeType::Upgrade,
+            -1 => ChangeType::Downgrade,
+            default => ChangeType::Lateral,
+        };
+    }
+
     /**
      * @throws SubscriptionNotAllowedException
      */

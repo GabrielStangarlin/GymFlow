@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\EndReason;
 use Database\Factories\ClientFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -35,6 +36,19 @@ class Client extends Model
     public function subscriptions(): HasMany
     {
         return $this->hasMany(Subscription::class);
+    }
+
+    public function currentSubscription(): ?Subscription
+    {
+        return $this->subscriptions()->whereNull('ended_on')->latest('id')->first();
+    }
+
+    public function hasOutstandingDebt(): bool
+    {
+        return $this->subscriptions()
+            ->where('end_reason', EndReason::Overdue)
+            ->whereNull('debt_settled_at')
+            ->exists();
     }
 
     public function accessLogs(): HasMany
