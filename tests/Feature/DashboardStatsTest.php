@@ -112,6 +112,39 @@ class DashboardStatsTest extends TestCase
         $this->assertSame(0.0, $hours[1][21]);
     }
 
+    public function test_peak_hours_boundaries_cap_and_distinct_clients(): void
+    {
+        $a = Client::factory()->create();
+        $this->log($a, AccessType::Entry, '2026-11-02 17:30');
+        $this->log($a, AccessType::Exit, '2026-11-02 19:00');
+        $this->log($a, AccessType::Entry, '2026-11-02 17:00');
+        $this->log($a, AccessType::Exit, '2026-11-02 17:20');
+        $this->log(Client::factory()->create(), AccessType::Entry, '2026-11-02 08:00');
+        $this->log(Client::factory()->create(), AccessType::Entry, '2026-11-02 23:00');
+        $this->log(Client::factory()->create(), AccessType::Entry, '2026-11-02 12:00');
+
+        $hours = $this->stats('2026-11-02', '2026-11-02')->peakHours();
+
+        $this->assertSame(1.0, $hours[1][17]);
+        $this->assertSame(1.0, $hours[1][18]);
+        $this->assertSame(0.0, $hours[1][19]);
+        $this->assertSame(1.0, $hours[1][8]);
+        $this->assertSame(1.0, $hours[1][9]);
+        $this->assertSame(0.0, $hours[1][10]);
+        $this->assertSame(1.0, $hours[1][12]);
+        $this->assertSame(1.0, $hours[1][13]);
+        $this->assertSame(0.0, $hours[1][14]);
+        $this->assertSame(1.0, $hours[1][23]);
+    }
+
+    public function test_dashboard_rejects_future_and_oversized_periods(): void
+    {
+        $this->actingAs(User::factory()->staff()->create());
+
+        $this->get(route('crm.dashboard', ['from' => '2026-11-01', 'to' => '2026-11-05']))->assertSessionHasErrors('to');
+        $this->get(route('crm.dashboard', ['from' => '2025-01-01', 'to' => '2026-11-04']))->assertSessionHasErrors('to');
+    }
+
     public function test_dashboard_page_renders(): void
     {
         Plan::factory()->create(['name' => 'Manhã']);

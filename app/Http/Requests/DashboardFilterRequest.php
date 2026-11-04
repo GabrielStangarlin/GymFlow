@@ -4,6 +4,8 @@ namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Carbon;
+use Illuminate\Validation\Validator;
 
 class DashboardFilterRequest extends FormRequest
 {
@@ -24,7 +26,22 @@ class DashboardFilterRequest extends FormRequest
     {
         return [
             'from' => ['nullable', 'date_format:Y-m-d'],
-            'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
+            'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from', 'before_or_equal:today'],
         ];
+    }
+
+    /**
+     * @return array<int, callable>
+     */
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            if ($validator->errors()->isNotEmpty() || ! $this->filled(['from', 'to'])) {
+                return;
+            }
+            if (Carbon::parse($this->input('from'))->diffInDays(Carbon::parse($this->input('to'))) > 366) {
+                $validator->errors()->add('to', 'O período não pode exceder 366 dias.');
+            }
+        }];
     }
 }

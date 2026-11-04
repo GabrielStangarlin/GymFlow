@@ -71,7 +71,7 @@
             @foreach ($weekdays as $day => $label)
                 <div class="text-gray-600">{{ $label }}</div>
                 @for ($hour = 0; $hour < 24; $hour++)
-                    <div class="h-6 rounded-sm bg-blue-600" style="opacity: {{ $peakHours[$day][$hour] / $maxHour }}" title="{{ $label }} {{ $hour }}h: {{ round($peakHours[$day][$hour], 1) }}"></div>
+                    <div class="h-6 rounded-sm bg-gray-100" title="{{ $label }} {{ $hour }}h: {{ round($peakHours[$day][$hour], 1) }}"><div class="h-full rounded-sm bg-blue-600" style="opacity: {{ $peakHours[$day][$hour] / $maxHour }}"></div></div>
                 @endfor
             @endforeach
         </div>

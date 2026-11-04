@@ -101,6 +101,7 @@ class DashboardStats
             ->groupBy(fn (AccessLog $log) => $log->client_id.'|'.$log->scanned_at->toDateString());
 
         foreach ($logs as $dayLogs) {
+            $counted = [];
             foreach ($dayLogs->values() as $index => $log) {
                 if ($log->type !== AccessType::Entry) {
                     continue;
@@ -110,8 +111,16 @@ class DashboardStats
                     ? $next->scanned_at
                     : $log->scanned_at->copy()->addHours(2)->min($log->scanned_at->copy()->endOfDay());
 
-                for ($hour = $log->scanned_at->hour; $hour <= $end->hour; $hour++) {
-                    $presences[$log->scanned_at->isoWeekday()][$hour]++;
+                $lastHour = $end->hour;
+                if ($end->minute === 0 && $end->second === 0 && $end > $log->scanned_at) {
+                    $lastHour--;
+                }
+
+                for ($hour = $log->scanned_at->hour; $hour <= $lastHour; $hour++) {
+                    if (! isset($counted[$hour])) {
+                        $counted[$hour] = true;
+                        $presences[$log->scanned_at->isoWeekday()][$hour]++;
+                    }
                 }
             }
         }
