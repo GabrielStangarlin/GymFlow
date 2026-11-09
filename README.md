@@ -2,6 +2,15 @@
 
 CRM para ginásios: inscrição de alunos, planos com horários e periodicidades, assinaturas e pagamentos, controlo de entradas e saídas por QR code e dashboard de ocupação. Os alunos ativam a conta por email e apresentam o QR à receção; o staff lê-o com a câmara.
 
+## Ferramentas de IA
+
+| Ferramenta | Para quê |
+|---|---|
+| Claude / Claude Code | Design e código do protótipo inicial; rascunhos da documentação, revistos pelo grupo |
+| ChatGPT (plano gratuito) | Apoio à especificação, revisão de requisitos e geração de código (gratuita para todos os elementos) |
+
+Documentação do projeto em [`docs/`](docs/).
+
 ## Requisitos
 
 - PHP 8.4 e Composer
