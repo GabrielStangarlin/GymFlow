@@ -64,7 +64,7 @@ O GymFlow é um sistema de gestão para um ginásio com sala livre e aulas de gr
 | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | O plano define janelas horárias em que o aluno pode entrar          | O plano define um **limite de aulas por semana** (ou ilimitado); as janelas horárias deixam de existir                                   |
 | O QR regista entrada e saída no ginásio                             | O QR continua a registar entrada e saída e, se o aluno estiver inscrito numa sessão a decorrer, **marca também a presença** nessa sessão |
-| Entrada recusada por pagamento em falta ou fora do horário do plano | Entrada recusada só por pagamento em falta (pendente, em atraso, sem assinatura) ou QR desconhecido                                      |
+| Entrada recusada por pagamento em falta ou fora do horário do plano | Entrada recusada por pagamento em falta (pendente, em atraso, sem assinatura), lotação máxima atingida ou QR desconhecido                                      |
 | O aluno só vê o seu QR code                                         | O aluno consulta aulas, inscreve-se, cancela, entra em lista de espera e aceita ofertas de vaga                                          |
 | Não existem aulas nem instrutores                                   | Aulas, sessões, inscrições, lista de espera e o papel de **instrutor** com acesso ao sistema                                             |
 
@@ -72,7 +72,7 @@ O GymFlow é um sistema de gestão para um ginásio com sala livre e aulas de gr
 ### 2.2 Problema
 
 - As aulas têm lugares limitados. Hoje a receção gere à mão quem entra em cada aula e quem fica à espera, o que gera aulas sobrelotadas, lugares vazios por desistências não comunicadas e reclamações de quem estava "primeiro".
-- Quando alguém desiste, não há forma justa e rápida de passar o lugar ao seguinte da fila.
+- Quando alguém desiste, a forma justa e rápida, é passar o lugar ao seguinte na fila.
 - Os planos são vendidos por número de aulas por semana, mas ninguém controla se o aluno faz mais aulas do que o plano permite.
 - O instrutor não sabe antecipadamente quantas pessoas vêm, nem quem faltou.
 - Alunos com pagamento em atraso continuam a reservar lugar em aulas.
