@@ -269,7 +269,7 @@ A **Cascata pura** foi rejeitada porque o pedido de mudança é certo e chega j�
 
 | Prática            | Como                                                                                              |
 | ------------------ | ------------------------------------------------------------------------------------------------- |
-| Ramos              | `main` protegido; um ramo por história (`feature/US-xx-descricao`)                                |
+| Ramos              | `main` protegido; um ramo por integrante                                                          |
 | Revisão            | Todo o código entra por pull request aprovado por outro elemento                                  |
 | Commits            | Cada elemento faz os seus próprios commits; o histórico não é reescrito                           |
 | Definition of Done | Definida no E3; no mínimo: testes do caso de uso a passar, PR revisto, rastreabilidade atualizada |
